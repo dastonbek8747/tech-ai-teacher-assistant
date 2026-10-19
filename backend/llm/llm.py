@@ -64,3 +64,6 @@ openrouter_gemma = ChatOpenRouter(
     model="google/gemma-4-31b-it:free"
 )
 
+ollama_qwen_2_5_coder = ChatOllama(model="qwen2.5-coder:latest")
+ollama_qwen3_8 = ChatOllama(model="qwen3:8b")
+

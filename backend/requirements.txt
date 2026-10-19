@@ -1,8 +1,13 @@
 langchain
 langchain-google-genai
 langchain-core
+langchain-qdrant
+langchain-huggingface
+pypdf
+sentence-transformers
 ddgs
 langchain-tavily
+langchain-google-calendar-tools
 langchain-community
 langchain-openrouter
 langchain-ollama
