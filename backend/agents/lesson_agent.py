@@ -8,13 +8,14 @@ import os
 load_dotenv()
 
 DB_URL = os.getenv("DATABASE_URL")
-with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
-    checkpointer.setup()
-    agent = create_agent(model=gemini_3_8_flash, tools=[], checkpointer=checkpointer, system_prompt=LESSON_AGENT_PROMPT)
-    while True:
-        user_inp = input("Enter your command: ")
-        if user_inp in ("exit", "quit"):
-            break
-        result = agent.invoke({"messages": [{"role": "user", "content": f"{user_inp}"}]},
-                              config={"configurable": {"thread_id": "daston12345"}})
-        print(result['messages'][-1].content[0]['text'])
+
+
+def chat_lesson_agent(request, session_id):
+    with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
+        checkpointer.setup()
+        agent = create_agent(model=gemini_3_8_flash, tools=[], checkpointer=checkpointer,
+                             system_prompt=LESSON_AGENT_PROMPT)
+
+        result = agent.invoke({"messages": [{"role": "user", "content": f"{request}"}]},
+                              config={"configurable": {"thread_id": session_id}})
+        return result['messages'][-1].content[0]['text']

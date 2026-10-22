@@ -10,15 +10,13 @@ load_dotenv()
 
 DB_URL = os.getenv("DATABASE_URL")
 
-with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
-    checkpointer.setup()
-    agent = create_agent(model=gemini_3_5_flash, tools=SEARCH_TOOLS, system_prompt=RESEARCH_AGENT_PROMPT,
-                         checkpointer=checkpointer)
 
-    while True:
-        user_input = input("Enter your choice: ")
-        if user_input == "1":
-            break
-        result = agent.invoke({"messages": [{"role": "user", "content": f"{user_input}"}]},
-                              config={"configurable": {"thread_id": "daston8722471"}})
-        print(result["messages"][-1].content[0]['text'])
+def chat_research_agent(request, session_id):
+    with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
+        checkpointer.setup()
+        agent = create_agent(model=gemini_3_5_flash, tools=SEARCH_TOOLS, system_prompt=RESEARCH_AGENT_PROMPT,
+                             checkpointer=checkpointer)
+
+        result = agent.invoke({"messages": [{"role": "user", "content": f"{request}"}]},
+                              config={"configurable": {"thread_id": session_id}})
+        return result["messages"][-1].content[0]['text']

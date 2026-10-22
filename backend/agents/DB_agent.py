@@ -15,16 +15,17 @@ DB_URL = os.getenv("DATABASE_URL")
 db = SQLDatabase.from_uri(DB_URL)
 sql = SQLDatabaseToolkit(db=db, llm=ollama_qwen_2_5_coder)
 sql_toolkit_tools = sql.get_tools()
-print(sql_toolkit_tools)
-with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
-    checkpointer.setup()
-    agent = create_agent(model=gemini_3_5_flash, tools=DATABASE_TOOLS + sql_toolkit_tools,
-                         system_prompt=DATABASE_AGENT_PROMPT,
-                         checkpointer=checkpointer)
-    while True:
-        user_input = input("Please enter your choice: ")
-        if user_input in ("exit", "quit"):
-            break
-        result = agent.invoke({"messages": [{"role": "user", "content": f"{user_input}"}]},
-                              config={"configurable": {"thread_id": "exampleuser123456"}})
-        print(result['messages'][-1].content[0]['text'])
+
+
+# print(sql_toolkit_tools)
+
+
+def chat_db_agent(request, session_id):
+    with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
+        checkpointer.setup()
+        agent = create_agent(model=gemini_3_5_flash, tools=DATABASE_TOOLS + sql_toolkit_tools,
+                             system_prompt=DATABASE_AGENT_PROMPT,
+                             checkpointer=checkpointer)
+        result = agent.invoke({"messages": [{"role": "user", "content": request}]},
+                              config={"configurable": {"thread_id": session_id}})
+    return result['messages'][-1].content[0]['text']
