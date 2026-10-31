@@ -1,6 +1,7 @@
 from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
 from ddgs.exceptions import TimeoutException, DDGSException, RatelimitException
 from langchain_tavily.tavily_search import TavilySearch, TavilySearchAPIWrapper
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
 
@@ -69,6 +70,7 @@ def duc_ducgo_search(request: str):
         return result
     except (TimeoutException, DDGSException, RatelimitException) as e:
         return {"eror": str(e)}
+
 
 
 SEARCH_TOOLS = [duc_ducgo_search, duc_ducgo_search_results, search_tavily]

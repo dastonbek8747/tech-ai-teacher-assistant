@@ -1,13 +1,9 @@
-from jinja2.nodes import List, Literal
 from langchain_groq import ChatGroq
-from typing import List, Literal
 from langchain_openrouter import ChatOpenRouter
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 import os
-from pydantic import BaseModel
 
 load_dotenv()
 
@@ -69,4 +65,3 @@ openrouter_gemma = ChatOpenRouter(
 
 ollama_qwen_2_5_coder = ChatOllama(model="qwen2.5-coder:latest")
 ollama_qwen3_8 = ChatOllama(model="qwen3:8b")
-
