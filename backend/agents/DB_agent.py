@@ -29,3 +29,5 @@ def chat_db_agent(request, session_id):
         result = agent.invoke({"messages": [{"role": "user", "content": request}]},
                               config={"configurable": {"thread_id": session_id}})
     return result['messages'][-1].content[0]['text']
+
+
