@@ -1,67 +1,96 @@
-from langchain_groq import ChatGroq
-from langchain_openrouter import ChatOpenRouter
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama
-from dotenv import load_dotenv
+"""LLM factory.
+
+Every model is created lazily through a getter, so importing this module never
+requires an API key. A missing key only raises when that specific model is used.
+"""
 import os
+from functools import lru_cache
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-groq_llama_3_1_8b = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model="llama-3.1-8b-instant"
-)
-groq_llama_3_3_70b = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model="llama-3.3-70b-versatile"
-)
-groq_gpt_120b_oss = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model="openai/gpt-oss-120b"
-)
-groq_gpt_20b_vgg = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model="openai/gpt-oss-20b"
-)
-groq_safety_gpt_20b = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model="openai/gpt-oss-safeguard-20b"
-)
-groq_qwen_3_8_27b = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model="qwen/qwen3.8-27b"
-)
+def _require(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(
+            f"{name} is not set. Copy .env.example to .env and add your key."
+        )
+    return value
 
-gemini_3_8_flash = ChatGoogleGenerativeAI(
-    api_key=GEMINI_API_KEY,
-    model="gemini-3.8-flash"
-)
-gemini_3_5_flash = ChatGoogleGenerativeAI(
-    api_key=GEMINI_API_KEY,
-    model="gemini-3.5-flash-lite"
-)
-gemini_3_1_pro = ChatGoogleGenerativeAI(
-    api_key=GEMINI_API_KEY,
-    model="gemini-3.1-pro-preview"
-)
 
-openrouter_apodex_1_1_mini = ChatOpenRouter(
-    api_key=OPENROUTER_API_KEY,
-    model="apodex/apodex-1.1-mini:free"
-)
-openrouter_dots3 = ChatOpenRouter(
-    api_key=OPENROUTER_API_KEY,
-    model="dots-studio/dots-3-note-preview:free"
-)
-openrouter_gemma = ChatOpenRouter(
-    api_key=OPENROUTER_API_KEY,
-    model="google/gemma-4-31b-it:free"
-)
+@lru_cache(maxsize=None)
+def _groq(model: str):
+    from langchain_groq import ChatGroq
 
-ollama_qwen_2_5_coder = ChatOllama(model="qwen2.5-coder:latest")
-ollama_qwen3_8 = ChatOllama(model="qwen3:8b")
+    return ChatGroq(api_key=_require("GROQ_API_KEY"), model=model)
+
+
+@lru_cache(maxsize=None)
+def _gemini(model: str):
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    return ChatGoogleGenerativeAI(api_key=_require("GEMINI_API_KEY"), model=model)
+
+
+@lru_cache(maxsize=None)
+def _openrouter(model: str):
+    from langchain_openrouter import ChatOpenRouter
+
+    return ChatOpenRouter(api_key=_require("OPENROUTER_API_KEY"), model=model)
+
+
+@lru_cache(maxsize=None)
+def _ollama(model: str):
+    from langchain_ollama import ChatOllama
+
+    return ChatOllama(model=model)
+
+
+# --- Groq ---
+def groq_llama_3_1_8b():
+    return _groq("llama-3.1-8b-instant")
+
+
+def groq_llama_3_3_70b():
+    return _groq("llama-3.3-70b-versatile")
+
+
+def groq_gpt_120b_oss():
+    return _groq("openai/gpt-oss-120b")
+
+
+def groq_gpt_20b_vgg():
+    return _groq("openai/gpt-oss-20b")
+
+
+# --- Google Gemini ---
+def gemini_3_8_flash():
+    return _gemini("gemini-3.8-flash")
+
+
+def gemini_3_5_flash():
+    return _gemini("gemini-3.5-flash-lite")
+
+
+def gemini_3_1_pro():
+    return _gemini("gemini-3.1-pro-preview")
+
+
+# --- OpenRouter ---
+def openrouter_apodex_1_1_mini():
+    return _openrouter("apodex/apodex-1.1-mini:free")
+
+
+def openrouter_gemma():
+    return _openrouter("google/gemma-4-31b-it:free")
+
+
+# --- Ollama (local) ---
+def ollama_qwen_2_5_coder():
+    return _ollama("qwen2.5-coder:latest")
+
+
+def ollama_qwen3_8():
+    return _ollama("qwen3:8b")

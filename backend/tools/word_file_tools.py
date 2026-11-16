@@ -22,13 +22,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 from docx import Document
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
-from docx.shared import Inches, Pt, RGBColor
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import Inches, Pt, RGBColor
 from langchain_core.tools import tool
-
 
 WORKSPACE = Path(
     os.getenv("WORD_WORKSPACE", str(Path.cwd() / "documents"))

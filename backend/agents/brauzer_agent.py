@@ -1,14 +1,11 @@
-import os
 import asyncio
+import os
 
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright
-
 from langchain.agents import create_agent
+from langchain_community.agent_toolkits.playwright.toolkit import PlayWrightBrowserToolkit
 from langchain_groq import ChatGroq
-from langchain_community.agent_toolkits.playwright.toolkit import (
-    PlayWrightBrowserToolkit
-)
+from playwright.async_api import async_playwright
 
 load_dotenv()
 

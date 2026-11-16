@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 import os
 import re
@@ -6,11 +7,11 @@ from copy import copy
 from pathlib import Path
 from typing import Any, Optional
 
+from langchain_core.tools import tool
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from langchain_core.tools import tool
 
 WORKSPACE = Path(
     os.getenv("EXCEL_WORKSPACE", str(Path.cwd() / "spreadsheets"))
@@ -296,7 +297,7 @@ def delete_sheet(file_path: str, output_path: str, sheet_name: str) -> str:
     """Delete a worksheet. Refuses to delete the last remaining worksheet."""
     try:
         _, wb = _load(file_path)
-        ws = _get_sheet(wb, sheet_name)
+        _get_sheet(wb, sheet_name)
         if len(wb.worksheets) <= 1:
             return _error("Oxirgi varaqni o'chirib bo'lmaydi.")
         del wb[sheet_name]

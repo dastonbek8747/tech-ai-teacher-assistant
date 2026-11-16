@@ -1,6 +1,15 @@
 from langchain_community.agent_toolkits.file_management import FileManagementToolkit
-from langchain_community.document_loaders import UnstructuredWordDocumentLoader, UnstructuredExcelLoader, PyPDFLoader, \
-    TextLoader, CSVLoader, YoutubeLoader, UnstructuredURLLoader, UnstructuredPDFLoader, JSONLoader
+from langchain_community.document_loaders import (
+    CSVLoader,
+    JSONLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredExcelLoader,
+    UnstructuredPDFLoader,
+    UnstructuredURLLoader,
+    UnstructuredWordDocumentLoader,
+    YoutubeLoader,
+)
 
 
 def read_word_file(file_path: str):

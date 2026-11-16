@@ -6,11 +6,11 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
+from langchain_core.tools import tool
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
-from langchain_core.tools import tool
 
 WORKSPACE = Path(
     os.getenv("PPTX_WORKSPACE", str(Path.cwd() / "presentations"))

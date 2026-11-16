@@ -1,14 +1,14 @@
 
+import json
 import os
 import re
-import json
 from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.engine import make_url
 from langchain_core.tools import tool
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import make_url
 
 # ============================================================
 # 1. SOZLAMALAR
@@ -16,16 +16,20 @@ from langchain_core.tools import tool
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
 POSTGRES_ADMIN_URL = os.getenv("POSTGRES_ADMIN_URL")
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL .env faylida ko'rsatilmagan.")
+_engine = None
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-)
+
+def get_engine():
+    """Create the SQLAlchemy engine lazily so importing this module needs no DB."""
+    global _engine
+    if _engine is None:
+        url = os.getenv("DATABASE_URL")
+        if not url:
+            raise RuntimeError("DATABASE_URL is not set. Copy .env.example to .env.")
+        _engine = create_engine(url, pool_pre_ping=True)
+    return _engine
 
 EXPORT_DIR = (
     Path(__file__).resolve().parents[2]
@@ -90,7 +94,7 @@ def get_table_columns(
     valid_identifier(table_name)
     valid_identifier(schema_name)
 
-    inspector = inspect(engine)
+    inspector = inspect(get_engine())
 
     if not inspector.has_table(table_name, schema=schema_name):
         raise ValueError(
@@ -131,7 +135,7 @@ def json_error(exc):
 def check_database_connection() -> str:
     """PostgreSQL bazasiga ulanishni tekshiradi."""
     try:
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             row = conn.execute(text("""
                 SELECT current_database(), current_user, version()
             """)).fetchone()
@@ -152,7 +156,7 @@ def check_database_connection() -> str:
 def get_database_info() -> str:
     """Joriy baza, foydalanuvchi, schema va PostgreSQL versiyasini beradi."""
     try:
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             row = conn.execute(text("""
                 SELECT current_database(),
                        current_user,
@@ -178,7 +182,7 @@ def list_database_tables(schema_name: str = "public") -> str:
     try:
         valid_identifier(schema_name)
 
-        tables = inspect(engine).get_table_names(
+        tables = inspect(get_engine()).get_table_names(
             schema=schema_name
         )
 
@@ -202,7 +206,7 @@ def get_table_schema(
         valid_identifier(table_name)
         valid_identifier(schema_name)
 
-        inspector = inspect(engine)
+        inspector = inspect(get_engine())
 
         if not inspector.has_table(table_name, schema=schema_name):
             return f"{schema_name}.{table_name} jadvali topilmadi."
@@ -252,7 +256,7 @@ def get_table_sample(
         table = qualified_table(table_name, schema_name)
         limit = max(1, min(int(limit), 100))
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             rows = conn.execute(
                 text(f"SELECT * FROM {table} LIMIT :lim"),
                 {"lim": limit},
@@ -278,7 +282,7 @@ def count_table_rows(
     try:
         table = qualified_table(table_name, schema_name)
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             count = conn.execute(
                 text(f"SELECT COUNT(*) FROM {table}")
             ).scalar_one()
@@ -356,7 +360,7 @@ def create_database_table(
         if primary_count > 1:
             return "Faqat bitta primary key ustuni qo'llab-quvvatlanadi."
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(
                 f"CREATE TABLE {table} ({', '.join(definitions)})"
             ))
@@ -395,7 +399,7 @@ def add_table_column(
 
         null_sql = "" if nullable else " NOT NULL"
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(
                 f"ALTER TABLE {table} ADD COLUMN "
                 f"{col} {column_type}{null_sql}"
@@ -442,7 +446,7 @@ def insert_database_record(
             for i, name in enumerate(names)
         }
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             result = conn.execute(
                 text(
                     f"INSERT INTO {table} ({col_sql}) "
@@ -505,7 +509,7 @@ def bulk_insert_records(
             for row in records
         ]
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(
                 text(
                     f"INSERT INTO {table} ({col_sql}) "
@@ -556,7 +560,7 @@ def search_database_records(
             if where else ""
         )
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             rows = conn.execute(
                 text(
                     f"SELECT * FROM {table}{where_sql} LIMIT :lim"
@@ -622,7 +626,7 @@ def update_database_record(
             f"WHERE {' AND '.join(where_parts)}"
         )
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             result = conn.execute(text(sql), params)
 
         return json.dumps({
@@ -664,7 +668,7 @@ def delete_database_record(
             )
             params[f"p{i}"] = value
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             result = conn.execute(
                 text(
                     f"DELETE FROM {table} "
@@ -708,7 +712,7 @@ def run_readonly_sql(sql_query: str) -> str:
         ):
             return "So'rovda ruxsat etilmagan SQL buyrug'i mavjud."
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             conn.execute(text("SET TRANSACTION READ ONLY"))
             result = conn.execute(text(sql))
             rows = result.mappings().fetchmany(200)
@@ -740,7 +744,7 @@ def analyze_numeric_column(
             return f"{column_name} ustuni topilmadi."
 
         column_info = next(
-            c for c in inspect(engine).get_columns(
+            c for c in inspect(get_engine()).get_columns(
                 table_name, schema=schema_name
             )
             if c["name"] == column_name
@@ -757,7 +761,7 @@ def analyze_numeric_column(
         ):
             return "Tanlangan ustun sonli turda emas."
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             row = conn.execute(text(f"""
                 SELECT COUNT({col}),
                        MIN({col}),
@@ -808,7 +812,7 @@ def export_query_to_file(
         if fmt not in {"csv", "xlsx"}:
             return "Format csv yoki xlsx bo'lishi kerak."
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             conn.execute(text("SET TRANSACTION READ ONLY"))
             df = pd.read_sql_query(text(sql), conn)
 
@@ -887,7 +891,7 @@ def drop_database_table(
         table = qualified_table(table_name, schema_name)
         check_table_exists(table_name, schema_name)
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(f"DROP TABLE {table} RESTRICT"))
 
         return f"{schema_name}.{table_name} jadvali o'chirildi."
@@ -963,12 +967,12 @@ def rename_database_table(
 
         check_table_exists(old_table_name, schema_name)
 
-        if inspect(engine).has_table(
+        if inspect(get_engine()).has_table(
             new_table_name, schema=schema_name
         ):
             return f"{new_table_name} jadvali allaqachon mavjud."
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(
                 f"ALTER TABLE {old_table} RENAME TO {new_name}"
             ))
@@ -1005,7 +1009,7 @@ def rename_table_column(
         if new_column_name in columns:
             return f"{new_column_name} ustuni allaqachon mavjud."
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(
                 f"ALTER TABLE {table} "
                 f"RENAME COLUMN {old_col} TO {new_col}"
@@ -1037,7 +1041,7 @@ def alter_table_column_type(
         if column_name not in get_table_columns(table_name, schema_name):
             return f"{column_name} ustuni topilmadi."
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(
                 f"ALTER TABLE {table} "
                 f"ALTER COLUMN {col} TYPE {col_type} "
@@ -1078,7 +1082,7 @@ def drop_table_column(
         if len(columns) <= 1:
             return "Oxirgi ustunni o'chirish mumkin emas."
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(
                 f"ALTER TABLE {table} DROP COLUMN {col} RESTRICT"
             ))
@@ -1104,7 +1108,7 @@ def truncate_database_table(
         table = qualified_table(table_name, schema_name)
         check_table_exists(table_name, schema_name)
 
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             conn.execute(text(f"TRUNCATE TABLE {table} RESTRICT"))
 
         return json.dumps({
@@ -1126,7 +1130,7 @@ def get_table_indexes(
     try:
         check_table_exists(table_name, schema_name)
 
-        indexes = inspect(engine).get_indexes(
+        indexes = inspect(get_engine()).get_indexes(
             table_name, schema=schema_name
         )
 
@@ -1150,7 +1154,7 @@ def get_table_foreign_keys(
     try:
         check_table_exists(table_name, schema_name)
 
-        foreign_keys = inspect(engine).get_foreign_keys(
+        foreign_keys = inspect(get_engine()).get_foreign_keys(
             table_name, schema=schema_name
         )
 
@@ -1175,11 +1179,11 @@ def get_table_statistics(
         table = qualified_table(table_name, schema_name)
         check_table_exists(table_name, schema_name)
 
-        columns = inspect(engine).get_columns(
+        columns = inspect(get_engine()).get_columns(
             table_name, schema=schema_name
         )
 
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             row_count = conn.execute(
                 text(f"SELECT COUNT(*) FROM {table}")
             ).scalar_one()

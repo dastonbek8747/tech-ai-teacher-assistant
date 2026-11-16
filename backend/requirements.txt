@@ -29,7 +29,11 @@ argon2-cffi
 psycopg2-binary
 pydantic
 sqlalchemy
-fastapi[standart]
+fastapi[standard]
 dark-swag
 langchain-qdrant
 pandas
+psycopg[binary]
+python-pptx
+python-docx
+openpyxl
