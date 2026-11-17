@@ -5,6 +5,7 @@ pydantic
 python-dotenv
 sqlalchemy
 psycopg2-binary
+psycopg[binary]
 pyjwt
 argon2-cffi
 pandas
